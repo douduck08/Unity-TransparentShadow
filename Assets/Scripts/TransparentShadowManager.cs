@@ -24,11 +24,11 @@ public class TransparentShadowManager : Singleton<TransparentShadowManager> {
         casters.Remove (caster);
     }
 
-    public List<TransparentShadowLight> GetLights () {
+    public IEnumerable<TransparentShadowLight> GetLights () {
         return lights;
     }
 
-    public List<TransparentShadowCaster> GetCasters () {
+    public IEnumerable<TransparentShadowCaster> GetCasters () {
         return casters;
     }
 }

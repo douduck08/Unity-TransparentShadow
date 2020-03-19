@@ -13,6 +13,7 @@
         #pragma target 3.0
 
         #include "UnityPBSLighting.cginc"
+        #include "TransparentShadowHelper.cginc"
 
         struct Input {
             float2 uv_MainTex;
@@ -35,19 +36,13 @@
         half _Metallic;
         half4 _Color;
 
-        float4x4 transparentShadow_VP;
-        sampler2D transparentShadow_map;
-
         void surf (Input IN, inout SurfaceOutputStandardWithShadow o) {
             half4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
             o.Albedo = c.rgb;
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
             o.Alpha = c.a;
-
-            float4 lightSpacePos = mul(transparentShadow_VP, float4(IN.worldPos, 1));
-            float2 shadow_uv = (lightSpacePos.xy / lightSpacePos.w) / 2.0f + 0.5;
-            o.TransShadow = tex2D(transparentShadow_map, shadow_uv);
+            o.TransShadow = getTransShadowColor(IN.worldPos);
         }
 
         inline half4 LightingStandardWithShadow (SurfaceOutputStandardWithShadow s, float3 viewDir, UnityGI gi) {

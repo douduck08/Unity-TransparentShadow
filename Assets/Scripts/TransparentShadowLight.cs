@@ -6,86 +6,115 @@ using UnityEngine.Rendering;
 [RequireComponent (typeof (Light))]
 public class TransparentShadowLight : MonoBehaviour {
 
-    CommandBuffer command;
-    RenderTexture coloredShadowBuffer;
-    Matrix4x4 _viewMatrix;
-    Matrix4x4 _projMatrix;
+    public Material blendMaterial;
 
-    public RenderTexture shadowMap {
-        get {
-            return coloredShadowBuffer;
-        }
-    }
+    new Light light;
 
-    public Matrix4x4 viewMatrix {
-        get {
-            return _viewMatrix;
-        }
-    }
+    CommandBuffer afterShadowMapCommand;
+    CommandBuffer renderColorBufferCommand;
+    CommandBuffer blendShadowMaskCommand;
 
-    public Matrix4x4 projectionMatrix {
-        get {
-            return _projMatrix;
-        }
-    }
+    RenderTexture coloredShadow;
+    RenderTexture coloredShadowDepth;
+    Matrix4x4 viewMatrix;
+    Matrix4x4 projMatrix;
 
     void OnEnable () {
         TransparentShadowManager.instance.Register (this);
-        CheckResource ();
+        light = GetComponent<Light> ();
     }
 
     void OnDisable () {
         TransparentShadowManager.instance.Unregister (this);
+        light = GetComponent<Light> ();
         ReleaseResource ();
     }
 
-    void CheckResource () {
-        var light = GetComponent<Light> ();
+    public void CheckResourceSettings (int resolution, float orthoSize, float zNear = 0.3f, float zFar = 100f) {
         if (light.type == LightType.Directional) {
-            if (coloredShadowBuffer == null) {
-                coloredShadowBuffer = new RenderTexture (1024, 1024, 0, RenderTextureFormat.ARGB32);
+            projMatrix = Matrix4x4.Ortho (-orthoSize, orthoSize, -orthoSize, orthoSize, zNear, zFar);
+            // projMatrix = GL.GetGPUProjectionMatrix (projMatrix, true);
+
+            viewMatrix = Matrix4x4.Inverse (Matrix4x4.TRS (
+                this.transform.position,
+                this.transform.rotation,
+                new Vector3 (1, 1, -1)
+            ));
+
+            if (coloredShadow == null) {
+                coloredShadow = new RenderTexture (resolution, resolution, 0, RenderTextureFormat.ARGB32);
+                coloredShadow.name = "Transparent Shadow Map";
             }
 
-            if (command == null) {
-                command = new CommandBuffer ();
-                command.name = "Transparent Shadow";
+            if (coloredShadowDepth == null) {
+                coloredShadowDepth = new RenderTexture (resolution, resolution, 0, RenderTextureFormat.Depth);
+                coloredShadowDepth.name = "Transparent Shadow Depth";
             }
-            light.AddCommandBuffer (LightEvent.AfterScreenspaceMask, command);
+
+            if (afterShadowMapCommand == null) {
+                afterShadowMapCommand = new CommandBuffer ();
+                afterShadowMapCommand.name = "Transparent Shadow";
+                afterShadowMapCommand.SetGlobalTexture ("_CascadeShadowMapTexture", BuiltinRenderTextureType.CurrentActive);
+                light.AddCommandBuffer (LightEvent.AfterShadowMap, afterShadowMapCommand);
+            }
+
+            if (renderColorBufferCommand == null) {
+                renderColorBufferCommand = new CommandBuffer ();
+                renderColorBufferCommand.name = "Transparent Shadow: Render to Buffers";
+                light.AddCommandBuffer (LightEvent.BeforeScreenspaceMask, renderColorBufferCommand);
+            }
+
+            if (blendShadowMaskCommand == null) {
+                blendShadowMaskCommand = new CommandBuffer ();
+                blendShadowMaskCommand.name = "Transparent Shadow: Blend Shadow Mask";
+                light.AddCommandBuffer (LightEvent.AfterScreenspaceMask, blendShadowMaskCommand);
+            }
         }
     }
 
     void ReleaseResource () {
-        var light = GetComponent<Light> ();
-
-        if (coloredShadowBuffer != null) {
-            coloredShadowBuffer.Release ();
-            coloredShadowBuffer = null;
+        if (coloredShadow != null) {
+            coloredShadow.Release ();
+            coloredShadow = null;
         }
 
-        if (command != null) {
-            light.RemoveCommandBuffer (LightEvent.AfterScreenspaceMask, command);
+        if (coloredShadowDepth != null) {
+            coloredShadowDepth.Release ();
+            coloredShadowDepth = null;
+        }
+
+        if (afterShadowMapCommand != null) {
+            light.RemoveCommandBuffer (LightEvent.AfterShadowMap, afterShadowMapCommand);
+            afterShadowMapCommand = null;
+        }
+
+        if (renderColorBufferCommand != null) {
+            light.RemoveCommandBuffer (LightEvent.BeforeScreenspaceMask, renderColorBufferCommand);
+            renderColorBufferCommand = null;
+        }
+
+        if (blendShadowMaskCommand != null) {
+            light.RemoveCommandBuffer (LightEvent.AfterScreenspaceMask, blendShadowMaskCommand);
+            blendShadowMaskCommand = null;
         }
     }
 
-    public void UpdateCommaad (List<TransparentShadowCaster> casters) {
-        command.Clear ();
-        command.SetRenderTarget (coloredShadowBuffer);
-        command.ClearRenderTarget (false, true, new Color (1, 1, 1, 0));
-        command.SetViewProjectionMatrices (_viewMatrix, _projMatrix);
+    public void UpdateCommand (IEnumerable<TransparentShadowCaster> casters, Matrix4x4 cameraFrustumCorners) {
+        var matrix_VP = projMatrix * viewMatrix;
+
+        renderColorBufferCommand.Clear ();
+        renderColorBufferCommand.SetRenderTarget (coloredShadow.colorBuffer, coloredShadowDepth.depthBuffer);
+        renderColorBufferCommand.ClearRenderTarget (true, true, new Color (1, 1, 1, 0));
+        renderColorBufferCommand.SetViewProjectionMatrices (viewMatrix, projMatrix);
         foreach (var caster in casters) {
-            command.DrawRenderer (caster.renderer, caster.material);
+            renderColorBufferCommand.DrawRenderer (caster.renderer, caster.material);
         }
-    }
 
-    public void UpdateMatrix () {
-        var orthoSize = 5f;
-        _projMatrix = Matrix4x4.Ortho (-orthoSize, orthoSize, -orthoSize, orthoSize, 0.3f, 1000);
-        // projMatrix = GL.GetGPUProjectionMatrix (projMatrix, true);
-
-        _viewMatrix = Matrix4x4.Inverse (Matrix4x4.TRS (
-            this.transform.position,
-            this.transform.rotation,
-            new Vector3 (1, 1, -1)
-        ));
+        blendMaterial.SetMatrix ("cameraFrustumCorners", cameraFrustumCorners);
+        blendShadowMaskCommand.Clear ();
+        blendShadowMaskCommand.SetGlobalMatrix ("transparentShadow_VP", matrix_VP);
+        blendShadowMaskCommand.SetGlobalTexture ("transparentShadow_map", coloredShadow);
+        blendShadowMaskCommand.SetGlobalTexture ("transparentShadow_depth", coloredShadowDepth);
+        // TODO: blendShadowMaskCommand.Blit (BuiltinRenderTextureType.None, BuiltinRenderTextureType.CurrentActive, blendMaterial, 1);
     }
 }
