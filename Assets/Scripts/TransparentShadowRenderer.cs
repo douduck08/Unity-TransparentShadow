@@ -5,6 +5,9 @@ using UnityEngine;
 [RequireComponent (typeof (Camera))]
 public class TransparentShadowRenderer : MonoBehaviour {
 
+    [SerializeField] int bufferSize = 1024;
+    [SerializeField] float orthoSize = 5f;
+
     Camera renderCamera;
     Vector3[] frustumCorners = new Vector3[4];
     Matrix4x4 cameraFrustumCorners;
@@ -13,13 +16,13 @@ public class TransparentShadowRenderer : MonoBehaviour {
         UpdateFrustumCorners ();
         var casters = TransparentShadowManager.instance.GetCasters ();
         foreach (var light in TransparentShadowManager.instance.GetLights ()) {
-            light.CheckResourceSettings (1024, 5f);
-            light.UpdateCommand (casters, cameraFrustumCorners);
+            light.CheckResourceSettings (bufferSize, orthoSize);
+            light.UpdateCommand (casters, cameraFrustumCorners, renderCamera);
         }
     }
 
     void UpdateFrustumCorners () {
-        if (renderCamera != null) {
+        if (renderCamera == null) {
             renderCamera = GetComponent<Camera> ();
         }
 

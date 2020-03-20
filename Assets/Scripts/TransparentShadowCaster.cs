@@ -5,7 +5,10 @@ using UnityEngine;
 [RequireComponent (typeof (Renderer))]
 public class TransparentShadowCaster : MonoBehaviour {
 
-    [SerializeField] Material _material;
+    [SerializeField] Shader shader;
+    [SerializeField] Color color;
+
+    Material _material;
     Renderer _renderer;
 
     public new Renderer renderer {
@@ -30,6 +33,17 @@ public class TransparentShadowCaster : MonoBehaviour {
 
     void OnDisable () {
         TransparentShadowManager.instance.Unregister (this);
+    }
+
+    void Update () {
+        UpdateMaterial ();
+    }
+
+    void UpdateMaterial () {
+        if (_material == null) {
+            _material = new Material (shader);
+        }
+        _material.SetColor ("_Color", color);
     }
 
 }

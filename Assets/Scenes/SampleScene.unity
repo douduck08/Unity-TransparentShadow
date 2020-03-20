@@ -333,7 +333,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c94030c3daa09b468ac323ee7133660, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _material: {fileID: 2100000, guid: ea068aded7b99cc4197f3a04151d76b3, type: 2}
+  shader: {fileID: 4800000, guid: 0968e1037a8379349b5a48e39ee20a28, type: 3}
+  color: {r: 1, g: 1, b: 0, a: 0.78431374}
 --- !u!1 &404740170
 GameObject:
   m_ObjectHideFlags: 0
@@ -726,7 +727,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c94030c3daa09b468ac323ee7133660, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _material: {fileID: 2100000, guid: 821b2055773877d448ca8693ab0cc6e7, type: 2}
+  shader: {fileID: 4800000, guid: 0968e1037a8379349b5a48e39ee20a28, type: 3}
+  color: {r: 1, g: 0, b: 0, a: 0.78431374}
 --- !u!135 &1464499802
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -802,7 +804,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1551230955
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -972,7 +974,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c94030c3daa09b468ac323ee7133660, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _material: {fileID: 2100000, guid: 58b4caf4f0d0290419a83fe7d22869c2, type: 2}
+  shader: {fileID: 4800000, guid: 0968e1037a8379349b5a48e39ee20a28, type: 3}
+  color: {r: 0.49803922, g: 1, b: 0, a: 0.78431374}
 --- !u!1 &1864882397
 GameObject:
   m_ObjectHideFlags: 0

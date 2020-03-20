@@ -99,7 +99,7 @@ public class TransparentShadowLight : MonoBehaviour {
         }
     }
 
-    public void UpdateCommand (IEnumerable<TransparentShadowCaster> casters, Matrix4x4 cameraFrustumCorners) {
+    public void UpdateCommand (IEnumerable<TransparentShadowCaster> casters, Matrix4x4 cameraFrustumCorners, Camera camera) {
         var matrix_VP = projMatrix * viewMatrix;
 
         renderColorBufferCommand.Clear ();
@@ -111,10 +111,12 @@ public class TransparentShadowLight : MonoBehaviour {
         }
 
         blendMaterial.SetMatrix ("cameraFrustumCorners", cameraFrustumCorners);
+        blendMaterial.SetMatrix ("_InverseView", camera.cameraToWorldMatrix);
+
         blendShadowMaskCommand.Clear ();
         blendShadowMaskCommand.SetGlobalMatrix ("transparentShadow_VP", matrix_VP);
         blendShadowMaskCommand.SetGlobalTexture ("transparentShadow_map", coloredShadow);
         blendShadowMaskCommand.SetGlobalTexture ("transparentShadow_depth", coloredShadowDepth);
-        // TODO: blendShadowMaskCommand.Blit (BuiltinRenderTextureType.None, BuiltinRenderTextureType.CurrentActive, blendMaterial, 1);
+        blendShadowMaskCommand.Blit (BuiltinRenderTextureType.None, BuiltinRenderTextureType.CurrentActive, blendMaterial, 0);
     }
 }
